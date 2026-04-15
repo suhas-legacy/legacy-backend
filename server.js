@@ -26,7 +26,7 @@ app.get('/api/health', (req, res) => {
 // Contact form submission endpoint
 app.post('/api/contact', async (req, res) => {
   try {
-    const { name, email, phone, account, message } = req.body;
+    const { name, email, phone, city, account, connect, message } = req.body;
 
     // Basic validation
     if (!name || !email || !message) {
@@ -50,7 +50,9 @@ app.post('/api/contact', async (req, res) => {
       name,
       email,
       phone: phone || '',
+      city: city || '',
       account: account || 'Not specified',
+      connect: connect || 'Sales Support',
       message
     });
 

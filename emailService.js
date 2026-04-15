@@ -18,14 +18,15 @@ const sendNotificationEmail = async (formData) => {
   
   const emailContent = `
     New Contact Form Submission
-    
+
     Name: ${formData.name}
     Email: ${formData.email || 'Not provided'}
     Phone: ${formData.phone || 'Not provided'}
     City: ${formData.city || 'Not provided'}
     Account Type: ${formData.account}
+    Connect: ${formData.connect}
     Message: ${formData.message}
-    
+
     Submitted on: ${new Date().toLocaleString()}
   `;
 
@@ -35,20 +36,87 @@ const sendNotificationEmail = async (formData) => {
     subject: `New Contact Form Submission from ${formData.name}`,
     text: emailContent,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333;">New Contact Form Submission</h2>
-        <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px;">
-          <p><strong>Name:</strong> ${formData.name}</p>
-          <p><strong>Email:</strong> ${formData.email || 'Not provided'}</p>
-          <p><strong>Phone:</strong> ${formData.phone || 'Not provided'}</p>
-          <p><strong>City:</strong> ${formData.city || 'Not provided'}</p>
-          <p><strong>Account Type:</strong> ${formData.account}</p>
-          <p><strong>Message:</strong></p>
-          <p style="white-space: pre-wrap;">${formData.message}</p>
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; background: #ffffff;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 40px 30px; text-align: center;">
+          <h1 style="color: #ffd700; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 1px;">
+            LEGACY GLOBAL BANK
+          </h1>
+          <p style="color: #ffffff; margin: 15px 0 0 0; font-size: 16px; opacity: 0.9;">
+            New Contact Form Submission
+          </p>
         </div>
-        <p style="margin-top: 20px; color: #666; font-size: 12px;">
-          Submitted on: ${new Date().toLocaleString()}
-        </p>
+
+        <!-- Content -->
+        <div style="padding: 35px 30px; background: #f8f9fa;">
+          <!-- Contact Info Card -->
+          <div style="background: #ffffff; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); margin-bottom: 25px;">
+            <h3 style="color: #1a1a2e; margin: 0 0 20px 0; font-size: 18px; border-bottom: 2px solid #ffd700; padding-bottom: 10px;">
+              Contact Information
+            </h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr style="border-bottom: 1px solid #e9ecef;">
+                <td style="padding: 12px 0; color: #6c757d; font-weight: 600; width: 40%;">Name</td>
+                <td style="padding: 12px 0; color: #1a1a2e; font-weight: 500;">${formData.name}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e9ecef;">
+                <td style="padding: 12px 0; color: #6c757d; font-weight: 600;">Email</td>
+                <td style="padding: 12px 0; color: #1a1a2e; font-weight: 500;">${formData.email || 'Not provided'}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e9ecef;">
+                <td style="padding: 12px 0; color: #6c757d; font-weight: 600;">Phone</td>
+                <td style="padding: 12px 0; color: #1a1a2e; font-weight: 500;">${formData.phone || 'Not provided'}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e9ecef;">
+                <td style="padding: 12px 0; color: #6c757d; font-weight: 600;">City</td>
+                <td style="padding: 12px 0; color: #1a1a2e; font-weight: 500;">${formData.city || 'Not provided'}</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Account Info Card -->
+          <div style="background: #ffffff; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); margin-bottom: 25px;">
+            <h3 style="color: #1a1a2e; margin: 0 0 20px 0; font-size: 18px; border-bottom: 2px solid #ffd700; padding-bottom: 10px;">
+              Account Details
+            </h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr style="border-bottom: 1px solid #e9ecef;">
+                <td style="padding: 12px 0; color: #6c757d; font-weight: 600; width: 40%;">Account Type</td>
+                <td style="padding: 12px 0; color: #1a1a2e; font-weight: 500;">${formData.account}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 0; color: #6c757d; font-weight: 600;">Connect</td>
+                <td style="padding: 12px 0;">
+                  <span style="background: linear-gradient(135deg, #ffd700 0%, #ffb700 100%); color: #1a1a2e; padding: 6px 16px; border-radius: 20px; font-weight: 600; font-size: 14px; display: inline-block;">
+                    ${formData.connect}
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Message Card -->
+          <div style="background: #ffffff; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);">
+            <h3 style="color: #1a1a2e; margin: 0 0 20px 0; font-size: 18px; border-bottom: 2px solid #ffd700; padding-bottom: 10px;">
+              Message
+            </h3>
+            <div style="background: #f8f9fa; border-left: 4px solid #ffd700; padding: 20px; border-radius: 0 8px 8px 0;">
+              <p style="color: #1a1a2e; margin: 0; line-height: 1.6; white-space: pre-wrap; font-size: 15px;">
+                ${formData.message}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #1a1a2e; padding: 25px 30px; text-align: center; border-radius: 0 0 12px 12px;">
+          <p style="color: #ffffff; margin: 0 0 10px 0; font-size: 14px; opacity: 0.8;">
+            Submitted on: ${new Date().toLocaleString()}
+          </p>
+          <p style="color: #ffd700; margin: 0; font-size: 12px; font-weight: 600;">
+            © 2026 Legacy Global Bank. All rights reserved.
+          </p>
+        </div>
       </div>
     `
   };
