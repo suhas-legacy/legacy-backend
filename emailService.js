@@ -23,7 +23,7 @@ const sendNotificationEmail = async (formData) => {
     Email: ${formData.email || 'Not provided'}
     Phone: ${formData.phone || 'Not provided'}
     City: ${formData.city || 'Not provided'}
-    Account Type: ${formData.account}
+    Priority: ${formData.priority}
     Connect: ${formData.connect}
     Message: ${formData.message}
 
@@ -74,15 +74,15 @@ const sendNotificationEmail = async (formData) => {
             </table>
           </div>
 
-          <!-- Account Info Card -->
+          <!-- Priority Info Card -->
           <div style="background: #ffffff; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); margin-bottom: 25px;">
             <h3 style="color: #1a1a2e; margin: 0 0 20px 0; font-size: 18px; border-bottom: 2px solid #ffd700; padding-bottom: 10px;">
-              Account Details
+              Priority Details
             </h3>
             <table style="width: 100%; border-collapse: collapse;">
               <tr style="border-bottom: 1px solid #e9ecef;">
-                <td style="padding: 12px 0; color: #6c757d; font-weight: 600; width: 40%;">Account Type</td>
-                <td style="padding: 12px 0; color: #1a1a2e; font-weight: 500;">${formData.account}</td>
+                <td style="padding: 12px 0; color: #6c757d; font-weight: 600; width: 40%;">Priority</td>
+                <td style="padding: 12px 0; color: #1a1a2e; font-weight: 500;">${formData.priority}</td>
               </tr>
               <tr>
                 <td style="padding: 12px 0; color: #6c757d; font-weight: 600;">Connect</td>
