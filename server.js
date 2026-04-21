@@ -11,7 +11,8 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({
   origin: [
     'https://legacy-website-popup.vercel.app',
-    'http://localhost:3000'
+    'http://localhost:3000',
+    'https://legacy-website-popup-427941784019.asia-south1.run.app'
   ],
   credentials: true
 }));
