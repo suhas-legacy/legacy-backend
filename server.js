@@ -3,6 +3,11 @@ const cors = require('cors');
 require('dotenv').config();
 
 const { sendNotificationEmail, sendAutoReplyEmail } = require('./emailService');
+const { handleTracking, getClientIp } = require('./trackingService');
+const dbService = require('./database');
+const { getEmailStats } = require('./api-stats');
+
+dbService.init();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -10,8 +15,9 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors({
   origin: [
-    'https://legacy-website-popup.vercel.app',
-    'http://localhost:3000'
+    'https://legacy-website-popup-151726525663.asia-south1.run.app',
+    'http://localhost:3000',
+    'http://legacyglobalbank.com'
   ],
   credentials: true
 }));
@@ -22,6 +28,9 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
+
+// Email statistics endpoint
+app.get('/api/stats', getEmailStats);
 
 // Contact form submission endpoint
 app.post('/api/contact', async (req, res) => {
@@ -44,6 +53,29 @@ app.post('/api/contact', async (req, res) => {
         message: 'Please provide a valid email address'
       });
     }
+
+    // Check for duplicate submissions (within last 1 hour)
+    const isDuplicate = await dbService.wasContactSubmitted(email, message, 1);
+    if (isDuplicate) {
+      return res.status(429).json({
+        success: false,
+        message: 'You have already submitted this message recently. Please wait before submitting again.'
+      });
+    }
+
+    // Record submission in database first
+    await dbService.recordContactSubmission({
+      name,
+      email,
+      phone: phone || '',
+      city: city || '',
+      message,
+      account: 'Contact Form',
+      priority: priority || 'medium',
+      connect: connect || 'Sales Support',
+      ip_address: req.ip || getClientIp(req),
+      user_agent: req.headers['user-agent']
+    });
 
     // Send notification email to admin
     await sendNotificationEmail({
@@ -76,6 +108,9 @@ app.post('/api/contact', async (req, res) => {
     });
   }
 });
+
+// Cookie consent & user data tracking endpoint
+app.post('/api/track', handleTracking);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
