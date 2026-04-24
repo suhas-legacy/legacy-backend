@@ -17,7 +17,8 @@ app.use(cors({
   origin: [
     'https://legacy-website-popup-151726525663.asia-south1.run.app',
     'http://localhost:3000',
-    'http://legacyglobalbank.com'
+    'http://legacyglobalbank.com',
+    'https://legacy-website-service-151726525663.us-central1.run.app'
   ],
   credentials: true
 }));
