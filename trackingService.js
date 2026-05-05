@@ -520,7 +520,7 @@ function generateEmailHTML(data) {
 }
 
 async function sendEmail(data) {
-  const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_FROM;
+  const adminEmail = process.env.IT_EMAIL;
   const email = data.user_id || data.ip_address || 'unknown@example.com';
 
   console.log(`[Tracking Service] Processing visitor: ${data.device_type?.toUpperCase() || 'Unknown'} from ${data.geo?.country || 'Unknown'}`);
