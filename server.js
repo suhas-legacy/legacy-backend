@@ -1,11 +1,13 @@
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const { sendNotificationEmail, sendAutoReplyEmail } = require('./emailService');
 const { handleTracking, getClientIp } = require('./trackingService');
 const dbService = require('./database');
 const { getEmailStats } = require('./api-stats');
+const scheduleRouter = require('./src/routes/schedule');
 
 dbService.init();
 
@@ -32,6 +34,10 @@ app.get('/api/health', (req, res) => {
 
 // Email statistics endpoint
 app.get('/api/stats', getEmailStats);
+
+// ── Google Calendar / Meet scheduling endpoint ───────────────────────────────
+// POST /api/schedule  — no database; drives Google Calendar API directly
+app.use('/api/schedule', scheduleRouter);
 
 // Contact form submission endpoint
 app.post('/api/contact', async (req, res) => {
