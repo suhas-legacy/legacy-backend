@@ -39,18 +39,6 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
-
-// Ensure preflight OPTIONS requests are always handled quickly
-app.options('*', cors({
-  origin: (incomingOrigin, callback) => {
-    if (!incomingOrigin) return callback(null, true);
-    const allowed = ALLOWED_ORIGIN_PATTERNS.some(pattern => pattern.test(incomingOrigin));
-    callback(null, allowed ? incomingOrigin : false);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
