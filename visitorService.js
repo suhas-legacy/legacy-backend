@@ -103,7 +103,7 @@ async function sendAdminRequestEmail(request) {
 
   const mailOptions = {
     from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-    to: process.env.IT_EMAIL || 'admin@legacyglobalbank.com',
+    to: process.env.SUPPORT_EMAIL || 'admin@legacyglobalbank.com',
     subject: `New Visitor Meeting Request [${request.id}]`,
     text: `New Visitor Meeting Request\n\nName: ${request.name}\nPhone: ${request.phone}\nEmail: ${request.email}\nMeeting Type: ${request.meeting_type === 'online' ? 'Online' : 'Offline'}\nRequested Date: ${request.formatted_date}\nRequested Time: ${request.meeting_time}\nRequest ID: ${request.id}`,
     html: `
@@ -280,7 +280,7 @@ async function sendAdminWarningEmail(request) {
   const transporter = createTransporter();
   const mailOptions = {
     from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-    to: process.env.IT_EMAIL || 'admin@legacyglobalbank.com',
+    to: process.env.SUPPORT_EMAIL || 'admin@legacyglobalbank.com',
     subject: `ALERT: Manual scheduling required [${request.id}]`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #C62828; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);">
