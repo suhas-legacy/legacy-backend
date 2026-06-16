@@ -7,7 +7,9 @@ const { handleTracking, getClientIp } = require('./trackingService');
 const dbService = require('./database');
 const { getEmailStats } = require('./api-stats');
 
-dbService.init();
+dbService.init().catch(err => {
+  console.error('[DATABASE] Failed to initialize database connection on startup:', err);
+});
 
 const app = express();
 const PORT = process.env.PORT || 3001;
