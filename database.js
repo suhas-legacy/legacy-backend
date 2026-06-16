@@ -1,13 +1,17 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
+const dbHost = process.env.DB_HOST || 'localhost';
+const useSSL = process.env.DB_SSL === 'true' || (dbHost !== 'localhost' && dbHost !== '127.0.0.1');
+
 // Postgres Connection Pool Configuration
 const poolConfig = {
-  host: process.env.DB_HOST || 'localhost',
+  host: dbHost,
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'root',
   database: process.env.DB_NAME || 'crm',
   port: parseInt(process.env.DB_PORT, 10) || 5432,
+  ssl: useSSL ? { rejectUnauthorized: false } : false,
 };
 
 class DatabaseService {
