@@ -140,7 +140,6 @@ function generateEmailHTML(data) {
     language,
     canvas_fingerprint,
     webgl_fingerprint,
-    cookies,
   } = data;
 
   const vpnFlag = geo.isVpn ? '<span style="color: #ef4444; font-weight: bold;">⚠️ VPN/Proxy Detected</span>' : '<span style="color: #22c55e;">✓ Direct Connection</span>';
@@ -485,26 +484,7 @@ function generateEmailHTML(data) {
       </div>
     </div>
 
-    <div class="section">
-      <h2 class="section-title">Cookies</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Cookie Name</th>
-            <th>Value (truncated)</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${Object.entries(cookies).slice(0, 20).map(([key, value]) => `
-            <tr>
-              <td>${key}</td>
-              <td>${value.length > 50 ? value.substring(0, 50) + '...' : value}</td>
-            </tr>
-          `).join('')}
-          ${Object.keys(cookies).length > 20 ? `<tr><td colspan="2" style="text-align: center; color: #6b7280;">... and ${Object.keys(cookies).length - 20} more cookies</td></tr>` : ''}
-        </tbody>
-      </table>
-    </div>
+    <!-- Cookie tracking disabled and stopped -->
 
     <div class="section">
       <h2 class="section-title">Raw Payload</h2>
@@ -626,7 +606,6 @@ async function handleTracking(req, res) {
       timezone: data.timezone || 'Unknown',
       language: data.language || 'Unknown',
       languages: data.languages || [],
-      cookies: data.cookies || {},
       localStorage_keys: data.localStorage_keys || [],
       sessionStorage_keys: data.sessionStorage_keys || [],
       connection_type: data.connection_type,
