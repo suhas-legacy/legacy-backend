@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const path = require('path');
 require('dotenv').config();
 
 const createTransporter = () => {
@@ -36,14 +37,15 @@ const sendNotificationEmail = async (formData) => {
     subject: `New Contact Form Submission from ${formData.name}`,
     text: emailContent,
     html: `
-      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; background: #ffffff;">
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; background: #ffffff; border: 1px solid #D9DCE6; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);">
         <!-- Header -->
-        <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 40px 30px; text-align: center;">
-          <h1 style="color: #ffd700; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 1px;">
+        <div style="background: #0A0A0A; padding: 35px 20px; text-align: center; border-bottom: 3px solid #ffd700;">
+          <img src="cid:logo" alt="Legacy Global Bank Logo" style="height: 60px; width: auto; display: block; margin: 0 auto 15px auto;" />
+          <h1 style="color: #ffd700; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 1.5px; font-family: 'Georgia', serif;">
             LEGACY GLOBAL BANK
           </h1>
-          <p style="color: #ffffff; margin: 15px 0 0 0; font-size: 16px; opacity: 0.9;">
-            New Contact Form Submission
+          <p style="color: #ffffff; margin: 8px 0 0 0; font-size: 14px; opacity: 0.8; letter-spacing: 1px;">
+            NEW CONTACT FORM SUBMISSION
           </p>
         </div>
 
@@ -109,7 +111,7 @@ const sendNotificationEmail = async (formData) => {
         </div>
 
         <!-- Footer -->
-        <div style="background: #1a1a2e; padding: 25px 30px; text-align: center; border-radius: 0 0 12px 12px;">
+        <div style="background: #0A0A0A; padding: 25px 30px; text-align: center; border-radius: 0 0 12px 12px;">
           <p style="color: #ffffff; margin: 0 0 10px 0; font-size: 14px; opacity: 0.8;">
             Submitted on: ${new Date().toLocaleString()}
           </p>
@@ -118,14 +120,19 @@ const sendNotificationEmail = async (formData) => {
           </p>
         </div>
       </div>
-    `
+    `,
+    attachments: [{
+      filename: 'logo.svg',
+      path: path.join(__dirname, 'logo copy.svg'),
+      cid: 'logo'
+    }]
   };
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log('Notification email sent successfully');
+    console.log(`Notification email sent successfully (From: ${mailOptions.from} -> To: ${mailOptions.to})`);
   } catch (error) {
-    console.error('Error sending notification email:', error);
+    console.error(`Error sending notification email (From: ${mailOptions.from}):`, error);
     throw error;
   }
 };
@@ -151,40 +158,54 @@ const sendAutoReplyEmail = async (formData) => {
       Legacy Global Bank Team
     `,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px; text-align: center;">
-          <h1 style="color: #2c3e50; margin-bottom: 20px;">Legacy Global Bank</h1>
-          <h2 style="color: #34495e; margin-bottom: 30px;">Thank You for Contacting Us</h2>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #D9DCE6; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);">
+        <!-- Header -->
+        <div style="background: #0A0A0A; padding: 35px 20px; text-align: center; border-bottom: 3px solid #ffd700;">
+          <img src="cid:logo" alt="Legacy Global Bank Logo" style="height: 60px; width: auto; display: block; margin: 0 auto 15px auto;" />
+          <h1 style="color: #ffd700; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 1.5px; font-family: 'Georgia', serif;">
+            LEGACY GLOBAL BANK
+          </h1>
+          <p style="color: #ffffff; margin: 8px 0 0 0; font-size: 14px; opacity: 0.8; letter-spacing: 1px;">
+            THANK YOU FOR CONTACTING US
+          </p>
         </div>
         
-        <div style="padding: 20px;">
+        <div style="padding: 30px 25px; background: #F8F6F2; color: #0A0A0A; line-height: 1.6;">
           <p>Dear <strong>${formData.name}</strong>,</p>
           
           <p>Thank you for reaching out to Legacy Global Bank. We have received your message and will get back to you shortly.</p>
           
-          <div style="background-color: #ecf0f1; padding: 15px; border-left: 4px solid #3498db; margin: 20px 0;">
-            <p style="margin: 0;"><strong>Your message:</strong></p>
-            <p style="white-space: pre-wrap; margin: 10px 0 0 0;">${formData.message}</p>
+          <div style="background-color: #ffffff; padding: 20px; border-left: 4px solid #ffd700; margin: 20px 0; border-radius: 0 6px 6px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <p style="margin: 0; color: #6E7285;"><strong>Your message:</strong></p>
+            <p style="white-space: pre-wrap; margin: 10px 0 0 0; color: #0A0A0A;">${formData.message}</p>
           </div>
           
-          <p>If you have any urgent inquiries, please contact us at <a href="mailto:support@legacyglobalbank.com">support@legacyglobalbank.com</a>.</p>
+          <p>If you have any urgent inquiries, please contact us at <a href="mailto:support@legacyglobalbank.com" style="color: #ffd700; font-weight: bold; text-decoration: none;">support@legacyglobalbank.com</a>.</p>
           
-          <p>Best regards,<br>
+          <p style="margin-top: 25px;">Best regards,<br>
           <strong>Legacy Global Bank Team</strong></p>
         </div>
         
-        <div style="background-color: #34495e; color: white; padding: 20px; text-align: center; border-radius: 0 0 8px 8px;">
-          <p style="margin: 0; font-size: 12px;">© 2026 Legacy Global Bank. All rights reserved.</p>
+        <!-- Footer -->
+        <div style="background: #0A0A0A; padding: 20px; text-align: center;">
+          <p style="color: #ffd700; margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 1px;">
+            © 2026 Legacy Global Bank. All rights reserved.
+          </p>
         </div>
       </div>
-    `
+    `,
+    attachments: [{
+      filename: 'logo.svg',
+      path: path.join(__dirname, 'logo copy.svg'),
+      cid: 'logo'
+    }]
   };
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log('Auto-reply email sent successfully');
+    console.log(`Auto-reply email sent successfully (From: ${mailOptions.from} -> To: ${mailOptions.to})`);
   } catch (error) {
-    console.error('Error sending auto-reply email:', error);
+    console.error(`Error sending auto-reply email (From: ${mailOptions.from}):`, error);
     throw error;
   }
 };
