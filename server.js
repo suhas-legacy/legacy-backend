@@ -13,14 +13,29 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
+const ALLOWED_ORIGIN_PATTERNS = [
+  // Any Cloud Run service under this GCP project (any region)
+  /^https:\/\/[\w-]+-151726525663\.[a-z0-9-]+\.run\.app$/,
+  // Production domains (with and without www)
+  /^https?:\/\/(www\.)?legacyglobalbank\.com$/,
+  // Local development (any port)
+  /^http:\/\/localhost(:\d+)?$/,
+  /^http:\/\/127\.0\.0\.1(:\d+)?$/,
+];
+
 app.use(cors({
-  origin: [
-    'https://legacy-website-popup-151726525663.asia-south1.run.app',
-    'http://localhost:3000',
-    'https://legacyglobalbank.com',
-    'https://legacy-website-service-151726525663.us-central1.run.app'
-  ],
-  credentials: true
+  origin: (incomingOrigin, callback) => {
+    // Allow requests with no origin (server-to-server, curl, Postman, etc.)
+    if (!incomingOrigin) return callback(null, true);
+    const allowed = ALLOWED_ORIGIN_PATTERNS.some(pattern => pattern.test(incomingOrigin));
+    if (allowed) {
+      callback(null, true);
+    } else {
+      console.warn(`[CORS] Blocked origin: ${incomingOrigin}`);
+      callback(new Error(`CORS policy: origin '${incomingOrigin}' is not allowed`));
+    }
+  },
+  credentials: true,
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
