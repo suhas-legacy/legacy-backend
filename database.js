@@ -263,6 +263,41 @@ class DatabaseService {
     return res.rows;
   }
 
+  // Get paginated + filtered visitor requests
+  async getVisitorRequestsPaginated({ search = '', status = '', meetingType = '', page = 1, pageSize = 20 } = {}) {
+    const params = [];
+    const conditions = [];
+
+    if (search) {
+      params.push(`%${search}%`);
+      const idx = params.length;
+      conditions.push(`(name ILIKE $${idx} OR email ILIKE $${idx} OR id ILIKE $${idx})`);
+    }
+    if (status && status !== 'ALL') {
+      params.push(status);
+      conditions.push(`status = $${params.length}`);
+    }
+    if (meetingType && meetingType !== 'ALL') {
+      params.push(meetingType);
+      conditions.push(`meeting_type = $${params.length}`);
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Total count (for pagination metadata)
+    const countQuery = `SELECT COUNT(*) FROM legacy_website.visitor_requests ${where}`;
+    const countRes = await this.pool.query(countQuery, params);
+    const total = parseInt(countRes.rows[0].count, 10);
+
+    // Paginated data
+    const offset = (page - 1) * pageSize;
+    params.push(pageSize, offset);
+    const dataQuery = `SELECT * FROM legacy_website.visitor_requests ${where} ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
+    const dataRes = await this.pool.query(dataQuery, params);
+
+    return { rows: dataRes.rows, total };
+  }
+
   // Update visitor request
   async updateVisitorRequest(id, updates) {
     const keys = Object.keys(updates);
