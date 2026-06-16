@@ -25,6 +25,22 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ─── SSE: Server-Sent Events for real-time push ──────────────────────────────
+// Keeps a Set of active SSE response objects (one per connected admin tab).
+const sseClients = new Set();
+
+/**
+ * Broadcasts a lightweight "data changed" event to all connected SSE clients.
+ * The frontend re-fetches only when it receives this signal.
+ */
+function broadcastUpdate(type = 'update') {
+  const payload = `data: ${JSON.stringify({ type, ts: Date.now() })}\n\n`;
+  for (const client of sseClients) {
+    try { client.write(payload); } catch (_) { sseClients.delete(client); }
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
@@ -61,6 +77,31 @@ app.post('/api/admin/login', (req, res) => {
   return res.status(401).json({
     success: false,
     message: 'Invalid email or password'
+  });
+});
+
+// SSE endpoint — admin dashboard subscribes here for real-time push updates
+app.get('/api/visitor/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // disable nginx buffering if present
+  res.flushHeaders();
+
+  // Send initial heartbeat so the browser knows the connection is alive
+  res.write(': connected\n\n');
+
+  // Keep-alive ping every 25 s to prevent proxy timeouts
+  const keepAlive = setInterval(() => {
+    try { res.write(': ping\n\n'); } catch (_) { clearInterval(keepAlive); }
+  }, 25000);
+
+  sseClients.add(res);
+
+  // Clean up when the client disconnects
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    sseClients.delete(res);
   });
 });
 
@@ -260,6 +301,9 @@ app.post('/api/visitor/request', async (req, res) => {
     // Store in SQLite
     await dbService.createVisitorRequest(newRequest);
 
+    // Notify connected admin dashboards immediately
+    broadcastUpdate('new_request');
+
     // Send notification email to admin team containing secure JWT tokens
     await visitorService.sendAdminRequestEmail(newRequest);
 
@@ -281,7 +325,22 @@ app.post('/api/visitor/request', async (req, res) => {
 // 2. Fetch All Requests (Admin Dashboard side)
 app.get('/api/visitor/requests', async (req, res) => {
   try {
-    const rows = await dbService.getAllVisitorRequests();
+    // Parse query params — all optional; defaults match "show everything"
+    const search    = (req.query.search    || '').trim();
+    const status    = (req.query.status    || 'ALL').trim().toUpperCase();
+    const meetingType = (req.query.type    || 'ALL').trim().toLowerCase();
+    const page      = Math.max(1, parseInt(req.query.page     || '1',  10));
+    const pageSize  = Math.min(100, Math.max(1, parseInt(req.query.pageSize || '20', 10)));
+
+    // Fetch from DB with filters + pagination applied at SQL level
+    const { rows, total } = await dbService.getVisitorRequestsPaginated({
+      search,
+      status:      status      === 'ALL' ? '' : status,
+      meetingType: meetingType === 'all' ? '' : meetingType,
+      page,
+      pageSize
+    });
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
     
     // Map SQLite snake_case schema to camelCase matching frontend keys
     const mapped = rows.map(r => {
@@ -340,7 +399,11 @@ app.get('/api/visitor/requests', async (req, res) => {
 
     res.json({
       success: true,
-      requests: mapped
+      requests: mapped,
+      total,
+      page,
+      pageSize,
+      totalPages
     });
   } catch (error) {
     console.error('Error fetching visitor requests:', error);
@@ -525,6 +588,7 @@ app.get('/api/visitor/approve', async (req, res) => {
     }
 
     // Success response
+    broadcastUpdate('approved');
     if (isAjax) {
       return res.json({ success: true, message: 'Request approved successfully.' });
     }
@@ -585,6 +649,7 @@ app.get('/api/visitor/reject', async (req, res) => {
     const updated = await dbService.getVisitorRequestById(id);
     await visitorService.sendVisitorConfirmationEmail(updated, 'rejection');
 
+    broadcastUpdate('rejected');
     if (isAjax) {
       return res.json({ success: true, message: 'Request rejected successfully.' });
     }
@@ -642,6 +707,7 @@ app.post('/api/visitor/reschedule', async (req, res) => {
     // Send rescheduled email alert to visitor
     await visitorService.sendVisitorConfirmationEmail(updated, 'alternative_slot');
 
+    broadcastUpdate('rescheduled');
     res.json({ success: true, message: 'Visitor request rescheduled successfully' });
 
   } catch (error) {
@@ -660,6 +726,7 @@ app.post('/api/visitor/cancel', async (req, res) => {
     if (!request) return res.status(404).json({ success: false, message: 'Visitor request not found' });
 
     await dbService.updateVisitorRequest(id, { status: 'CANCELLED' });
+    broadcastUpdate('cancelled');
     res.json({ success: true, message: 'Visitor meeting cancelled successfully' });
 
   } catch (error) {
@@ -678,6 +745,7 @@ app.post('/api/visitor/complete', async (req, res) => {
     if (!request) return res.status(404).json({ success: false, message: 'Visitor request not found' });
 
     await dbService.updateVisitorRequest(id, { status: 'COMPLETED' });
+    broadcastUpdate('completed');
     res.json({ success: true, message: 'Visitor request marked as completed' });
 
   } catch (error) {
