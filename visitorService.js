@@ -231,7 +231,7 @@ async function sendVisitorConfirmationEmail(request, type) {
     const checkinToken = signToken({
       id: request.id,
       action: 'checkin',
-      email: 'gate@legacyglobalbank.com',
+      email: 'admin@legacyglobalbank.com',
       exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60
     });
     const checkinUrl = `${hostUrl}/visitor_form/checkin?id=${request.id}&token=${checkinToken}`;
