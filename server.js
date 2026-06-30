@@ -282,7 +282,10 @@ app.get('/api/visitor/slots', async (req, res) => {
 // 1. Submit Request (Visitor side)
 app.post('/api/visitor/request', async (req, res) => {
   try {
-    const { name, email, phone, meetingType, date, formattedDate, time } = req.body;
+    const { 
+      name, email, phone, meetingType, date, formattedDate, time,
+      purposeOfVisit, referenceEmployee, preferredBranch, personToMeet, existingClient, tradingAccountId, additionalNotes
+    } = req.body;
 
     if (!name || !email || !phone || !meetingType) {
       return res.status(400).json({
@@ -295,6 +298,20 @@ app.post('/api/visitor/request', async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Meeting date and time slot are required for online meetings'
+      });
+    }
+
+    if (!purposeOfVisit || !preferredBranch || !existingClient) {
+      return res.status(400).json({
+        success: false,
+        message: 'Purpose of visit, preferred branch, and client status are required'
+      });
+    }
+
+    if (existingClient === 'Yes' && !tradingAccountId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Trading Account ID is required for existing clients'
       });
     }
 
@@ -314,10 +331,17 @@ app.post('/api/visitor/request', async (req, res) => {
       meeting_date: meetingType === 'online' ? date : '',
       formatted_date: meetingType === 'online' ? formattedDate : 'N/A',
       meeting_time: meetingType === 'online' ? time : 'N/A',
-      status: 'PENDING_APPROVAL'
+      status: 'PENDING_APPROVAL',
+      purpose_of_visit: purposeOfVisit,
+      reference_employee: referenceEmployee || '',
+      preferred_branch: preferredBranch,
+      person_to_meet: personToMeet || '',
+      existing_client: existingClient,
+      trading_account_id: existingClient === 'Yes' ? tradingAccountId : '',
+      additional_notes: additionalNotes || ''
     };
 
-    // Store in SQLite
+    // Store in SQLite/PostgreSQL
     await dbService.createVisitorRequest(newRequest);
 
     // Notify connected admin dashboards immediately
@@ -326,9 +350,18 @@ app.post('/api/visitor/request', async (req, res) => {
     // Send notification email to admin team containing secure JWT tokens
     await visitorService.sendAdminRequestEmail(newRequest);
 
+    // Generate checkin token for the client
+    const checkinToken = visitorService.signToken({
+      id: requestId,
+      action: 'checkin',
+      email: 'gate@legacyglobalbank.com',
+      exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60
+    });
+
     res.status(201).json({
       success: true,
       requestId: requestId,
+      checkinToken: checkinToken,
       message: 'Visitor request registered successfully. Awaiting administrator approval.'
     });
 
@@ -379,8 +412,10 @@ app.get('/api/visitor/requests', async (req, res) => {
         history.push({ status: 'CANCELLED', timestamp: new Date().toISOString(), note: 'Meeting event cancelled.' });
       } else if (r.status === 'COMPLETED') {
         history.push({ status: 'COMPLETED', timestamp: new Date().toISOString(), note: 'Meeting completed successfully.' });
+      } else if (r.status === 'CHECKED_IN') {
+        history.push({ status: 'CHECKED_IN', timestamp: r.confirmed_at || new Date().toISOString(), note: 'Visitor checked in at branch office.' });
       }
-
+    
       const approveToken = visitorService.signToken({ 
         id: r.id, 
         action: 'approve', 
@@ -412,7 +447,14 @@ app.get('/api/visitor/requests', async (req, res) => {
         createdAt: r.created_at,
         approveToken,
         rejectToken,
-        history
+        history,
+        purposeOfVisit: r.purpose_of_visit || '',
+        referenceEmployee: r.reference_employee || '',
+        preferredBranch: r.preferred_branch || '',
+        personToMeet: r.person_to_meet || '',
+        existingClient: r.existing_client || '',
+        tradingAccountId: r.trading_account_id || '',
+        additionalNotes: r.additional_notes || ''
       };
     });
 
@@ -460,6 +502,8 @@ app.get('/api/visitor/request/:id', async (req, res) => {
       history.push({ status: 'CANCELLED', timestamp: new Date().toISOString(), note: 'Meeting event cancelled.' });
     } else if (r.status === 'COMPLETED') {
       history.push({ status: 'COMPLETED', timestamp: new Date().toISOString(), note: 'Meeting completed successfully.' });
+    } else if (r.status === 'CHECKED_IN') {
+      history.push({ status: 'CHECKED_IN', timestamp: r.confirmed_at || new Date().toISOString(), note: 'Visitor checked in at branch office.' });
     }
 
     const approveToken = visitorService.signToken({
@@ -473,6 +517,13 @@ app.get('/api/visitor/request/:id', async (req, res) => {
       action: 'reject',
       email: 'admin@legacyglobalbank.com',
       exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60
+    });
+
+    const checkinToken = visitorService.signToken({
+      id: r.id,
+      action: 'checkin',
+      email: 'gate@legacyglobalbank.com',
+      exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60
     });
 
     res.json({
@@ -495,7 +546,15 @@ app.get('/api/visitor/request/:id', async (req, res) => {
         createdAt: r.created_at,
         approveToken,
         rejectToken,
-        history
+        checkinToken,
+        history,
+        purposeOfVisit: r.purpose_of_visit || '',
+        referenceEmployee: r.reference_employee || '',
+        preferredBranch: r.preferred_branch || '',
+        personToMeet: r.person_to_meet || '',
+        existingClient: r.existing_client || '',
+        tradingAccountId: r.trading_account_id || '',
+        additionalNotes: r.additional_notes || ''
       }
     });
   } catch (error) {
@@ -549,12 +608,38 @@ app.get('/api/visitor/approve', async (req, res) => {
 
     // 3. Process Approval
     if (request.meeting_type === 'offline') {
-      // Offline direct approval
-      await dbService.updateVisitorRequest(id, { 
+      // Offline direct approval with optional visiting time
+      const date = req.query.date || '';
+      const time = req.query.time || '';
+      const formattedDate = req.query.formattedDate || 'N/A';
+
+      const updates = { 
         status: 'APPROVED',
         confirmed_at: new Date().toISOString(),
         approved_by: decoded.email
-      });
+      };
+
+      if (date && time) {
+        updates.meeting_date = date;
+        updates.meeting_time = time;
+        updates.formatted_date = formattedDate;
+
+        // Build active request context
+        const activeRequest = {
+          ...request,
+          meeting_date: date,
+          meeting_time: time,
+          formatted_date: formattedDate
+        };
+
+        const calDetails = await visitorService.createOfflineCalendarEvent(activeRequest);
+        if (calDetails) {
+          updates.calendar_event_id = calDetails.calendarEventId;
+          updates.calendar_id = calDetails.calendarId;
+        }
+      }
+
+      await dbService.updateVisitorRequest(id, updates);
 
       // Fetch fresh record to send email
       const updated = await dbService.getVisitorRequestById(id);
@@ -770,6 +855,81 @@ app.post('/api/visitor/complete', async (req, res) => {
   } catch (error) {
     console.error('Error completing request:', error);
     res.status(500).json({ success: false, message: 'Failed to complete visitor request' });
+  }
+});
+
+// 8. Secure Visitor Pass Check-In (via QR code scan)
+app.post('/api/visitor/checkin', async (req, res) => {
+  try {
+    const { id, token } = req.body;
+    if (!id) return res.status(400).json({ success: false, message: 'Pass ID is required' });
+
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Authorization token is required to perform check-in.' });
+    }
+
+    const decoded = visitorService.verifyToken(token);
+    if (!decoded || decoded.id !== id || decoded.action !== 'checkin') {
+      return res.status(400).json({ success: false, message: 'Invalid or expired check-in authorization token.' });
+    }
+
+    const request = await dbService.getVisitorRequestById(id);
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Visitor pass not found.' });
+    }
+
+    let statusUpdate = 'CHECKED_IN';
+    let updates = { status: statusUpdate, confirmed_at: new Date().toISOString() };
+
+    if (request.status === 'PENDING_APPROVAL') {
+      updates.approved_by = decoded.email || 'gate@legacyglobalbank.com';
+    }
+
+    await dbService.updateVisitorRequest(id, updates);
+    broadcastUpdate('checked_in');
+
+    res.json({
+      success: true,
+      message: request.status === 'PENDING_APPROVAL' 
+        ? 'Visitor pass approved and checked in successfully.'
+        : 'Visitor checked in successfully.'
+    });
+
+  } catch (error) {
+    console.error('Error during visitor check-in:', error);
+    res.status(500).json({ success: false, message: 'An internal error occurred during check-in.' });
+  }
+});
+
+// 8a. Admin Direct Check-In (without token, called from Admin Dashboard)
+app.post('/api/visitor/checkin-direct', async (req, res) => {
+  try {
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ success: false, message: 'Pass ID is required' });
+
+    const request = await dbService.getVisitorRequestById(id);
+    if (!request) return res.status(404).json({ success: false, message: 'Visitor pass not found.' });
+
+    let statusUpdate = 'CHECKED_IN';
+    let updates = { status: statusUpdate, confirmed_at: new Date().toISOString() };
+
+    if (request.status === 'PENDING_APPROVAL') {
+      updates.approved_by = 'admin@legacyglobalbank.com';
+    }
+
+    await dbService.updateVisitorRequest(id, updates);
+    broadcastUpdate('checked_in');
+
+    res.json({
+      success: true,
+      message: request.status === 'PENDING_APPROVAL' 
+        ? 'Visitor pass approved and checked in successfully.'
+        : 'Visitor checked in successfully.'
+    });
+
+  } catch (error) {
+    console.error('Error during admin direct check-in:', error);
+    res.status(500).json({ success: false, message: 'Failed to complete visitor check-in.' });
   }
 });
 

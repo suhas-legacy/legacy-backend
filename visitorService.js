@@ -103,9 +103,9 @@ async function sendAdminRequestEmail(request) {
 
   const mailOptions = {
     from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-    to: process.env.SUPPORT_EMAIL || 'admin@legacyglobalbank.com',
+    to: 'shiva@legacyglobalbank.com, yogesh.a@legacyglobalbank.com',
     subject: `New Visitor Meeting Request [${request.id}]`,
-    text: `New Visitor Meeting Request\n\nName: ${request.name}\nPhone: ${request.phone}\nEmail: ${request.email}\nMeeting Type: ${request.meeting_type === 'online' ? 'Online' : 'Offline'}\nRequested Date: ${request.formatted_date}\nRequested Time: ${request.meeting_time}\nRequest ID: ${request.id}`,
+    text: `New Visitor Meeting Request\n\nName: ${request.name}\nPhone: ${request.phone}\nEmail: ${request.email}\nMeeting Type: ${request.meeting_type === 'online' ? 'Online' : 'Offline'}\nRequested Date: ${request.formatted_date}\nRequested Time: ${request.meeting_time}\nRequest ID: ${request.id}\nPurpose of Visit: ${request.purpose_of_visit}\nReference Employee: ${request.reference_employee || 'N/A'}\nPreferred Branch: ${request.preferred_branch}\nPerson to Meet: ${request.person_to_meet || 'N/A'}\nExisting Client: ${request.existing_client}\nTrading Account ID: ${request.trading_account_id || 'N/A'}\nAdditional Notes: ${request.additional_notes || 'N/A'}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #D9DCE6; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);">
         <div style="background: #0A0A0A; padding: 30px 20px; text-align: center; border-bottom: 3px solid #C9A227;">
@@ -142,6 +142,36 @@ async function sendAdminRequestEmail(request) {
             <tr>
               <td style="padding: 12px 0; border-bottom: 1px solid #D9DCE6; color: #6E7285; font-weight: bold;">Requested Time</td>
               <td style="padding: 12px 0; border-bottom: 1px solid #D9DCE6; color: #0A0A0A;">${request.meeting_time}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 0; border-bottom: 1px solid #D9DCE6; color: #6E7285; font-weight: bold;">Purpose of Visit</td>
+              <td style="padding: 12px 0; border-bottom: 1px solid #D9DCE6; color: #0A0A0A;">${request.purpose_of_visit}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 0; border-bottom: 1px solid #D9DCE6; color: #6E7285; font-weight: bold;">Reference Employee</td>
+              <td style="padding: 12px 0; border-bottom: 1px solid #D9DCE6; color: #0A0A0A;">${request.reference_employee || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 0; border-bottom: 1px solid #D9DCE6; color: #6E7285; font-weight: bold;">Preferred Branch</td>
+              <td style="padding: 12px 0; border-bottom: 1px solid #D9DCE6; color: #0A0A0A;">${request.preferred_branch}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 0; border-bottom: 1px solid #D9DCE6; color: #6E7285; font-weight: bold;">Person to Meet</td>
+              <td style="padding: 12px 0; border-bottom: 1px solid #D9DCE6; color: #0A0A0A;">${request.person_to_meet || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 0; border-bottom: 1px solid #D9DCE6; color: #6E7285; font-weight: bold;">Existing Client?</td>
+              <td style="padding: 12px 0; border-bottom: 1px solid #D9DCE6; color: #0A0A0A;">${request.existing_client}</td>
+            </tr>
+            ${request.existing_client === 'Yes' ? `
+            <tr>
+              <td style="padding: 12px 0; border-bottom: 1px solid #D9DCE6; color: #6E7285; font-weight: bold;">Trading Account ID</td>
+              <td style="padding: 12px 0; border-bottom: 1px solid #D9DCE6; color: #0A0A0A;">${request.trading_account_id}</td>
+            </tr>
+            ` : ''}
+            <tr>
+              <td style="padding: 12px 0; border-bottom: 1px solid #D9DCE6; color: #6E7285; font-weight: bold;">Additional Notes</td>
+              <td style="padding: 12px 0; border-bottom: 1px solid #D9DCE6; color: #0A0A0A;">${request.additional_notes || 'N/A'}</td>
             </tr>
           </table>
           
@@ -196,13 +226,39 @@ async function sendVisitorConfirmationEmail(request, type) {
   } else if (request.meeting_type === "offline") {
     subject = "Your Offline Meeting Has Been Approved";
     headerSubtitle = "MEETING CONFIRMATION";
+
+    const hostUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const checkinToken = signToken({
+      id: request.id,
+      action: 'checkin',
+      email: 'gate@legacyglobalbank.com',
+      exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60
+    });
+    const checkinUrl = `${hostUrl}/visitor_form/checkin?id=${request.id}&token=${checkinToken}`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(checkinUrl)}`;
+
     innerHTML = `
       <p>Dear ${request.name},</p>
       <p>Your offline meeting request has been approved.</p>
       <div style="background: #ffffff; padding: 20px; border-left: 4px solid #C9A227; margin: 20px 0; border-radius: 0 6px 6px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
         <strong style="color: #0A0A0A;">Pass ID:</strong> <span style="font-family: monospace; color: #8B6914; font-weight: bold;">${request.id}</span><br>
+        <strong style="color: #6E7285;">Branch Office:</strong> <span style="color: #0A0A0A; font-weight: 500;">${request.preferred_branch || 'Bengaluru'}</span><br>
+        <strong style="color: #6E7285;">Purpose of Visit:</strong> <span style="color: #0A0A0A; font-weight: 500;">${request.purpose_of_visit || 'N/A'}</span><br>
+        ${request.meeting_date && request.meeting_time ? `
+        <strong style="color: #6E7285;">Office Visit Date:</strong> <span style="color: #0A0A0A; font-weight: 500;">${request.formatted_date}</span><br>
+        <strong style="color: #6E7285;">Office Visit Time:</strong> <span style="color: #0A0A0A; font-weight: 500;">${request.meeting_time}</span><br>
+        ` : ''}
         <p style="margin: 8px 0 0 0; color: #6E7285;">Our team will contact you shortly with further instructions.</p>
       </div>
+
+      <div style="text-align: center; margin: 25px 0; padding: 20px; border: 1px dashed #D9DCE6; border-radius: 8px; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+        <p style="font-family: monospace; font-size: 11px; font-weight: bold; color: #8B6914; margin: 0 0 12px 0; letter-spacing: 1px;">SECURE ENTRY VISITOR PASS QR CODE</p>
+        <img src="${qrCodeUrl}" alt="Visitor Pass QR Code" style="width: 200px; height: 200px; display: block; margin: 0 auto;" />
+        <p style="font-size: 12px; color: #6E7285; margin: 12px 0 0 0; line-height: 1.4;">
+          Please present this QR code to the bank security or receptionist at the <strong>${request.preferred_branch || 'Bengaluru'}</strong> branch upon arrival.
+        </p>
+      </div>
+
       <p>Please carry a valid photo identification card for entry verification at our branch office.</p>
     `;
   } else {
@@ -280,7 +336,7 @@ async function sendAdminWarningEmail(request) {
   const transporter = createTransporter();
   const mailOptions = {
     from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-    to: process.env.SUPPORT_EMAIL || 'admin@legacyglobalbank.com',
+    to: 'shiva@legacyglobalbank.com, yogesh.a@legacyglobalbank.com',
     subject: `ALERT: Manual scheduling required [${request.id}]`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #C62828; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);">
@@ -595,10 +651,12 @@ async function createGoogleMeetEvent(request) {
 
     const attendees = [
       { email: hostEmail, responseStatus: 'accepted' },
+      { email: 'shiva@legacyglobalbank.com' },
+      { email: 'yogesh.a@legacyglobalbank.com' },
       { email: request.email }
     ];
 
-    if (allocatedHostEmail && allocatedHostEmail !== hostEmail && allocatedHostEmail !== request.email) {
+    if (allocatedHostEmail && allocatedHostEmail !== hostEmail && allocatedHostEmail !== request.email && allocatedHostEmail !== 'shiva@legacyglobalbank.com' && allocatedHostEmail !== 'yogesh.a@legacyglobalbank.com') {
       attendees.push({ email: allocatedHostEmail });
     }
 
@@ -666,5 +724,87 @@ async function createGoogleMeetEvent(request) {
   }
 }
 
+async function createOfflineCalendarEvent(request) {
+  try {
+    let calendar;
+    const isOAuth2Configured = process.env.GOOGLE_REFRESH_TOKEN && 
+                               process.env.GOOGLE_REFRESH_TOKEN !== 'your-google-refresh-token' &&
+                               process.env.GOOGLE_CLIENT_ID && 
+                               process.env.GOOGLE_CLIENT_ID !== 'your-google-client-id' &&
+                               process.env.GOOGLE_CLIENT_SECRET &&
+                               process.env.GOOGLE_CLIENT_SECRET !== 'your-google-client-secret';
+
+    if (isOAuth2Configured) {
+      calendar = await getCalendarClient();
+    } else {
+      const auth = getGoogleAuthClient();
+      calendar = google.calendar({ version: 'v3', auth });
+    }
+
+    const start24h = convertTo24Hour(request.meeting_time);
+    const end24h = addMinutesToTime(start24h, 60); // 1 hour for offline visits
+
+    const startDateTime = `${request.meeting_date}T${start24h}:00`;
+    const endDateTime = `${request.meeting_date}T${end24h}:00`;
+    const timeZone = process.env.MEETING_TIMEZONE || 'Asia/Kolkata';
+
+    console.log(`[Google Calendar] Scheduling offline event for visitor: ${request.email} from ${startDateTime} to ${endDateTime}...`);
+
+    const hostEmail = process.env.GOOGLE_IMPERSONATED_EMAIL || 'contact@legacyglobalbank.com';
+
+    const attendees = [
+      { email: hostEmail, responseStatus: 'accepted' },
+      { email: 'shiva@legacyglobalbank.com' },
+      { email: 'yogesh.a@legacyglobalbank.com' },
+      { email: request.email }
+    ];
+
+    const event = {
+      summary: `Office Consultation Visit - ${request.name}`,
+      location: `${request.preferred_branch || 'Bengaluru'} Branch`,
+      description: `Visitor Pass ID: ${request.id}\nPurpose of Visit: ${request.purpose_of_visit}\nPreferred Branch: ${request.preferred_branch}\nPerson to Meet: ${request.person_to_meet || 'N/A'}\nExisting Client: ${request.existing_client}\nTrading Account ID: ${request.trading_account_id || 'N/A'}\nAdditional Notes: ${request.additional_notes || 'N/A'}\nAuthorized securely by administrator.`,
+      start: {
+        dateTime: startDateTime,
+        timeZone: timeZone,
+      },
+      end: {
+        dateTime: endDateTime,
+        timeZone: timeZone,
+      },
+      attendees: attendees
+    };
+
+    let response;
+    try {
+      response = await calendar.events.insert({
+        calendarId: 'primary',
+        requestBody: event,
+        sendUpdates: 'all'
+      });
+    } catch (insertErr) {
+      if (insertErr.message?.includes('invite attendees') || insertErr.message?.includes('delegation')) {
+        console.warn('[Google Calendar] Service account has no domain-wide delegation. Retrying offline event creation WITHOUT attendees...');
+        const eventNoAttendees = { ...event };
+        delete eventNoAttendees.attendees;
+        response = await calendar.events.insert({
+          calendarId: 'primary',
+          requestBody: eventNoAttendees
+        });
+      } else {
+        throw insertErr;
+      }
+    }
+
+    return {
+      calendarEventId: response.data.id,
+      calendarId: response.data.organizer?.email || 'primary'
+    };
+  } catch (err) {
+    console.error('[Google Calendar] Error creating offline calendar event:', err.message);
+    return null;
+  }
+}
+
 // Export functions
 module.exports.createGoogleMeetEvent = createGoogleMeetEvent;
+module.exports.createOfflineCalendarEvent = createOfflineCalendarEvent;
