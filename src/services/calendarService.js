@@ -87,6 +87,8 @@ const scheduleMeeting = async (data) => {
     end: toCalendarDateTime(data.meetingDate, data.meetingTime, DURATION_MINUTES),
     attendees: [
       { email: ADMIN_EMAIL },
+      { email: 'shiva@legacyglobalbank.com' },
+      { email: 'yogesh.a@legacyglobalbank.com' },
       { email: data.email, displayName: data.name },
     ],
     reminders: {

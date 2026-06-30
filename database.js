@@ -113,6 +113,15 @@ class DatabaseService {
       await this.pool.query(createContactSubmissionsTable);
       await this.pool.query(createVisitorRequestsTable);
       await this.pool.query(createUsedTokensTable);
+
+      // Add columns dynamically for new visitor pass questions
+      await this.pool.query('ALTER TABLE legacy_website.visitor_requests ADD COLUMN IF NOT EXISTS purpose_of_visit TEXT');
+      await this.pool.query('ALTER TABLE legacy_website.visitor_requests ADD COLUMN IF NOT EXISTS reference_employee TEXT');
+      await this.pool.query('ALTER TABLE legacy_website.visitor_requests ADD COLUMN IF NOT EXISTS preferred_branch TEXT');
+      await this.pool.query('ALTER TABLE legacy_website.visitor_requests ADD COLUMN IF NOT EXISTS person_to_meet TEXT');
+      await this.pool.query('ALTER TABLE legacy_website.visitor_requests ADD COLUMN IF NOT EXISTS existing_client TEXT');
+      await this.pool.query('ALTER TABLE legacy_website.visitor_requests ADD COLUMN IF NOT EXISTS trading_account_id TEXT');
+      await this.pool.query('ALTER TABLE legacy_website.visitor_requests ADD COLUMN IF NOT EXISTS additional_notes TEXT');
       
       console.log('Database tables created/verified successfully under legacy_website schema');
     } catch (err) {
@@ -233,8 +242,9 @@ class DatabaseService {
   async createVisitorRequest(data) {
     const query = `
       INSERT INTO legacy_website.visitor_requests (
-        id, name, phone, email, meeting_type, meeting_date, formatted_date, meeting_time, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        id, name, phone, email, meeting_type, meeting_date, formatted_date, meeting_time, status,
+        purpose_of_visit, reference_employee, preferred_branch, person_to_meet, existing_client, trading_account_id, additional_notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
     `;
     
     const params = [
@@ -246,7 +256,14 @@ class DatabaseService {
       data.meeting_date || null,
       data.formatted_date || null,
       data.meeting_time || null,
-      data.status || 'PENDING_APPROVAL'
+      data.status || 'PENDING_APPROVAL',
+      data.purpose_of_visit || null,
+      data.reference_employee || null,
+      data.preferred_branch || null,
+      data.person_to_meet || null,
+      data.existing_client || null,
+      data.trading_account_id || null,
+      data.additional_notes || null
     ];
     
     await this.pool.query(query, params);
